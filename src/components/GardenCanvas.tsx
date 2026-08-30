@@ -3,6 +3,7 @@ import { createGardenDays, createGardenWeeks, gardenAssetUrls, seeded, selectedG
 import type { ContributionDay } from '../lib/types';
 
 type SceneImages = Partial<Record<keyof typeof gardenAssetUrls, HTMLImageElement>>;
+const coverPatchCache = new Map<string, HTMLCanvasElement>();
 
 function loadImage(url: string) {
   return new Promise<HTMLImageElement | null>((resolve) => {
@@ -13,11 +14,30 @@ function loadImage(url: string) {
   });
 }
 
-function drawCover(context: CanvasRenderingContext2D, image: HTMLImageElement, sourceX: number, sourceY: number, sourceSize: number, x: number, y: number, width: number, height: number, alpha: number) {
+function drawCover(context: CanvasRenderingContext2D, image: HTMLImageElement, sourceX: number, sourceY: number, sourceSize: number, x: number, y: number, width: number, height: number, alpha: number, seed: number) {
+  const cacheKey = [seed, Math.round(sourceX), Math.round(sourceY), Math.round(sourceSize), Math.round(width), Math.round(height)].join(':');
+  let patch = coverPatchCache.get(cacheKey);
+  if (!patch) {
+    if (coverPatchCache.size > 160) coverPatchCache.clear();
+    patch = document.createElement('canvas');
+    patch.width = Math.max(1, Math.round(width));
+    patch.height = Math.max(1, Math.round(height));
+    const patchContext = patch.getContext('2d');
+    if (!patchContext) return;
+    patchContext.drawImage(image, sourceX, sourceY, sourceSize, sourceSize, 0, 0, patch.width, patch.height);
+    const gradient = patchContext.createRadialGradient(patch.width / 2, patch.height / 2, Math.min(patch.width, patch.height) * .12, patch.width / 2, patch.height / 2, Math.max(patch.width, patch.height) * .68);
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
+    gradient.addColorStop(.58, 'rgba(0, 0, 0, .92)');
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    patchContext.globalCompositeOperation = 'destination-in';
+    patchContext.fillStyle = gradient;
+    patchContext.fillRect(0, 0, patch.width, patch.height);
+    coverPatchCache.set(cacheKey, patch);
+  }
   context.save();
   context.globalAlpha = alpha;
   context.globalCompositeOperation = 'multiply';
-  context.drawImage(image, sourceX, sourceY, sourceSize, sourceSize, x, y, width, height);
+  context.drawImage(patch, x, y, width, height);
   context.restore();
 }
 
@@ -111,7 +131,7 @@ function drawScene(canvas: HTMLCanvasElement, days: ContributionDay[], leadingBl
       const sourceY = seeded(week.seed, 3) * Math.max(1, images.meadow.naturalHeight - cropSize);
       const patchWidth = unit * (2.5 + week.activity * 4.8);
       const patchHeight = height * (.18 + week.activity * .4);
-      drawCover(context, images.meadow, sourceX, sourceY, cropSize, x - patchWidth / 2, ground - patchHeight, patchWidth, patchHeight, .14 + week.activity * .68);
+      drawCover(context, images.meadow, sourceX, sourceY, cropSize, x - patchWidth / 2, ground - patchHeight, patchWidth, patchHeight, .14 + week.activity * .68, week.seed);
     }
   });
 
