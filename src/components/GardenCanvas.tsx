@@ -4,6 +4,7 @@ import type { ContributionDay } from '../lib/types';
 
 type SceneImages = Partial<Record<keyof typeof gardenAssetUrls, HTMLImageElement>>;
 const coverPatchCache = new Map<string, HTMLCanvasElement>();
+const meadowLayerCache = new Map<string, HTMLCanvasElement>();
 
 function loadImage(url: string) {
   return new Promise<HTMLImageElement | null>((resolve) => {
@@ -64,6 +65,58 @@ function drawCover(context: CanvasRenderingContext2D, image: HTMLImageElement, s
 function drawPlantAnchor(context: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, size: number, alpha: number, seed: number) {
   const sourceSize = Math.min(image.naturalWidth, image.naturalHeight);
   drawCover(context, image, 0, 0, sourceSize, x, y, size, size, alpha, seed + 303);
+}
+
+function drawMeadowGrowth(context: CanvasRenderingContext2D, image: HTMLImageElement, gardenDays: ReturnType<typeof createGardenDays>, width: number, height: number, unit: number) {
+  const signature = gardenDays.map((day) => `${day.seed}:${day.week}:${day.weekday}:${day.count}`).join(',');
+  const cacheKey = [image.naturalWidth, image.naturalHeight, Math.round(width), Math.round(height), signature].join(':');
+  let layer = meadowLayerCache.get(cacheKey);
+
+  if (!layer) {
+    if (meadowLayerCache.size > 12) meadowLayerCache.clear();
+    layer = document.createElement('canvas');
+    layer.width = Math.max(1, Math.round(width));
+    layer.height = Math.max(1, Math.round(height));
+    const layerContext = layer.getContext('2d');
+    const mask = document.createElement('canvas');
+    mask.width = layer.width;
+    mask.height = layer.height;
+    const maskContext = mask.getContext('2d');
+    if (!layerContext || !maskContext) return;
+
+    const targetAspect = layer.width / layer.height;
+    const sourceAspect = image.naturalWidth / image.naturalHeight;
+    const sourceWidth = sourceAspect > targetAspect ? image.naturalHeight * targetAspect : image.naturalWidth;
+    const sourceHeight = sourceAspect > targetAspect ? image.naturalHeight : image.naturalWidth / targetAspect;
+    const sourceX = (image.naturalWidth - sourceWidth) / 2;
+    const sourceY = (image.naturalHeight - sourceHeight) / 2;
+    layerContext.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, layer.width, layer.height);
+
+    gardenDays.forEach((day) => {
+      if (day.dry) return;
+      const x = (day.week + .5 + (seeded(day.seed, 401) - .5) * .35) * unit;
+      const y = height * (.86 - day.weekday * .05);
+      const radiusX = unit * (.55 + day.activity * 3.65);
+      const radiusY = height * (.045 + day.activity * .16);
+      const gradient = maskContext.createRadialGradient(x, y, Math.min(radiusX, radiusY) * .05, x, y, Math.max(radiusX, radiusY));
+      gradient.addColorStop(0, `rgba(255, 255, 255, ${.22 + day.activity * .68})`);
+      gradient.addColorStop(.42, `rgba(255, 255, 255, ${.12 + day.activity * .55})`);
+      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      maskContext.globalCompositeOperation = 'lighter';
+      maskContext.fillStyle = gradient;
+      maskContext.fillRect(x - radiusX, y - radiusY, radiusX * 2, radiusY * 2);
+    });
+
+    layerContext.globalCompositeOperation = 'destination-in';
+    layerContext.drawImage(mask, 0, 0);
+    meadowLayerCache.set(cacheKey, layer);
+  }
+
+  context.save();
+  context.globalAlpha = .8;
+  context.globalCompositeOperation = 'multiply';
+  context.drawImage(layer, 0, 0, width, height);
+  context.restore();
 }
 
 function drawDryDetail(context: CanvasRenderingContext2D, x: number, y: number, unit: number, seed: number) {
@@ -147,18 +200,7 @@ function drawScene(canvas: HTMLCanvasElement, days: ContributionDay[], leadingBl
   context.fillStyle = 'rgba(255, 248, 225, .12)';
   context.fillRect(0, 0, width, height * .3);
 
-  weeks.forEach((week) => {
-    const x = (week.week + .5) * unit;
-    const ground = height * (.83 - week.peakWeekday * .035);
-    if (week.activity > 0 && images.meadow) {
-      const cropSize = Math.min(images.meadow.naturalWidth, images.meadow.naturalHeight) * (.34 + seeded(week.seed, 1) * .16);
-      const sourceX = seeded(week.seed, 2) * Math.max(1, images.meadow.naturalWidth - cropSize);
-      const sourceY = seeded(week.seed, 3) * Math.max(1, images.meadow.naturalHeight - cropSize);
-      const patchWidth = unit * (2.5 + week.activity * 4.8);
-      const patchHeight = height * (.18 + week.activity * .4);
-      drawCover(context, images.meadow, sourceX, sourceY, cropSize, x - patchWidth / 2, ground - patchHeight, patchWidth, patchHeight, .14 + week.activity * .68, week.seed);
-    }
-  });
+  if (images.meadow) drawMeadowGrowth(context, images.meadow, gardenDays, width, height, unit);
 
   gardenDays.forEach((day) => {
     const x = (day.week + .5) * unit + (seeded(day.seed, 105) - .5) * unit * .72;
