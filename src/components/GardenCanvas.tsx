@@ -15,7 +15,7 @@ function loadImage(url: string) {
 }
 
 function drawCover(context: CanvasRenderingContext2D, image: HTMLImageElement, sourceX: number, sourceY: number, sourceSize: number, x: number, y: number, width: number, height: number, alpha: number, seed: number) {
-  const cacheKey = [seed, Math.round(sourceX), Math.round(sourceY), Math.round(sourceSize), Math.round(width), Math.round(height)].join(':');
+  const cacheKey = [seed, image.naturalWidth, image.naturalHeight, Math.round(sourceX), Math.round(sourceY), Math.round(sourceSize), Math.round(width), Math.round(height)].join(':');
   let patch = coverPatchCache.get(cacheKey);
   if (!patch) {
     if (coverPatchCache.size > 160) coverPatchCache.clear();
@@ -24,10 +24,30 @@ function drawCover(context: CanvasRenderingContext2D, image: HTMLImageElement, s
     patch.height = Math.max(1, Math.round(height));
     const patchContext = patch.getContext('2d');
     if (!patchContext) return;
+    // A cut-out from a photograph should never reveal its rectangular bounds.
+    // The irregular silhouette is deterministic, so the same contribution day
+    // retains the same small piece of terrain across redraws.
+    const centerX = patch.width / 2;
+    const centerY = patch.height / 2;
+    patchContext.save();
+    patchContext.beginPath();
+    for (let point = 0; point <= 18; point += 1) {
+      const angle = (Math.PI * 2 * point) / 18;
+      const radiusX = patch.width * (.43 + seeded(seed, point + 141) * .14);
+      const radiusY = patch.height * (.43 + seeded(seed, point + 169) * .14);
+      const pointX = centerX + Math.cos(angle) * radiusX;
+      const pointY = centerY + Math.sin(angle) * radiusY;
+      if (point === 0) patchContext.moveTo(pointX, pointY);
+      else patchContext.lineTo(pointX, pointY);
+    }
+    patchContext.closePath();
+    patchContext.clip();
     patchContext.drawImage(image, sourceX, sourceY, sourceSize, sourceSize, 0, 0, patch.width, patch.height);
-    const gradient = patchContext.createRadialGradient(patch.width / 2, patch.height / 2, Math.min(patch.width, patch.height) * .12, patch.width / 2, patch.height / 2, Math.max(patch.width, patch.height) * .68);
+    patchContext.restore();
+    const gradient = patchContext.createRadialGradient(centerX, centerY, Math.min(patch.width, patch.height) * .08, centerX, centerY, Math.max(patch.width, patch.height) * .56);
     gradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
-    gradient.addColorStop(.58, 'rgba(0, 0, 0, .92)');
+    gradient.addColorStop(.48, 'rgba(0, 0, 0, .88)');
+    gradient.addColorStop(.75, 'rgba(0, 0, 0, .45)');
     gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
     patchContext.globalCompositeOperation = 'destination-in';
     patchContext.fillStyle = gradient;
@@ -39,6 +59,11 @@ function drawCover(context: CanvasRenderingContext2D, image: HTMLImageElement, s
   context.globalCompositeOperation = 'multiply';
   context.drawImage(patch, x, y, width, height);
   context.restore();
+}
+
+function drawPlantAnchor(context: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, size: number, alpha: number, seed: number) {
+  const sourceSize = Math.min(image.naturalWidth, image.naturalHeight);
+  drawCover(context, image, 0, 0, sourceSize, x, y, size, size, alpha, seed + 303);
 }
 
 function drawDryDetail(context: CanvasRenderingContext2D, x: number, y: number, unit: number, seed: number) {
@@ -150,19 +175,11 @@ function drawScene(canvas: HTMLCanvasElement, days: ContributionDay[], leadingBl
     const ground = height * (.83 - week.peakWeekday * .035);
     if ((week.plant === 'bush' || week.plant === 'tree') && images.shrub) {
       const size = unit * (3.3 + week.activity * 2.8);
-      context.save();
-      context.globalAlpha = .58 + week.activity * .24;
-      context.globalCompositeOperation = 'multiply';
-      context.drawImage(images.shrub, x - size / 2, ground - size * .82, size, size);
-      context.restore();
+      drawPlantAnchor(context, images.shrub, x - size / 2, ground - size * .82, size, .58 + week.activity * .24, week.seed);
     }
     if (week.plant === 'tree' && images.tree) {
       const size = unit * (5.4 + seeded(week.seed, 90) * 2.2);
-      context.save();
-      context.globalAlpha = .82;
-      context.globalCompositeOperation = 'multiply';
-      context.drawImage(images.tree, x - size / 2, ground - size * .94, size, size);
-      context.restore();
+      drawPlantAnchor(context, images.tree, x - size / 2, ground - size * .94, size, .82, week.seed + 97);
     }
   });
 
