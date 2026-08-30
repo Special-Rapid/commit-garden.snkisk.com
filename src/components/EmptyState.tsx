@@ -1,3 +1,2 @@
-export function EmptyState() {
-  return <section className="empty-callout" aria-labelledby="empty-heading"><span aria-hidden="true">·</span><div><h2 id="empty-heading">This garden is resting</h2><p>There are no public contributions in this date range yet. Try a different username or come back after the next commit.</p></div></section>;
-}
+import { usePreferences } from '../lib/preferences';
+export function EmptyState() { const { locale } = usePreferences(); const ja = locale === 'ja'; return <section className="empty-callout" aria-labelledby="empty-heading"><span aria-hidden="true">·</span><div><h2 id="empty-heading">{ja ? 'この庭は休憩中です' : 'This garden is resting'}</h2><p>{ja ? 'この期間には公開Contributionがまだありません。別のユーザー名を試すか、次のcommitのあとにまた見にきてください。' : 'There are no public contributions in this date range yet. Try a different username or come back after the next commit.'}</p></div></section>; }

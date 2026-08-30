@@ -1,1 +1,2 @@
-export function LoadingState() { return <section className="state-card loading-state" aria-live="polite"><span className="loading-leaf" aria-hidden="true">♧</span><h1>Preparing your garden</h1><p>We’re collecting your public GitHub contribution history.</p></section>; }
+import { usePreferences } from '../lib/preferences';
+export function LoadingState() { const { locale } = usePreferences(); const ja = locale === 'ja'; return <section className="state-card loading-state" aria-live="polite"><span className="loading-leaf" aria-hidden="true">♧</span><h1>{ja ? '庭を育てています' : 'Preparing your garden'}</h1><p>{ja ? '公開されているGitHubのContribution履歴を集めています。' : 'We’re collecting your public GitHub contribution history.'}</p></section>; }
