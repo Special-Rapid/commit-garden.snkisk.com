@@ -36,7 +36,7 @@ button:disabled { cursor:not-allowed; background:#80917d; transform:none; }
 .preview-garden .mini-map-section > div:first-child { display:none; }
 .preview-stat { display:flex; justify-content:space-between; align-items:baseline; border-top:1px solid var(--border); margin-top:var(--space-3); padding-top:var(--space-3); color:var(--muted); font-size:.88rem; }
 .preview-stat strong { color:var(--text); font-family:Georgia,serif; font-size:1.45rem; }
-.dashboard { display:grid; gap:var(--space-5); }
+.dashboard { display:grid; grid-template-columns:minmax(0, 1fr); gap:var(--space-5); }
 .user-header { display:grid; grid-template-columns:auto 1fr auto; gap:var(--space-3); align-items:center; padding-bottom:var(--space-4); border-bottom:1px solid var(--border); }
 .avatar { border-radius:50%; background:var(--soil-dry); border:3px solid var(--surface); box-shadow:0 4px 12px rgba(38,51,34,.13); }
 .user-header .eyebrow { margin-bottom:4px; font-size:.68rem; }
