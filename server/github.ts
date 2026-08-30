@@ -40,8 +40,15 @@ export async function getCommitGardenData(username: string, token: string | unde
   } catch {
     throw new GitHubApiError('NETWORK_ERROR', 'Could not reach GitHub. Please try again.', true);
   }
+  let responseText = '';
   let payload: GraphQLResponse;
-  try { payload = await response.json() as GraphQLResponse; } catch { throw new GitHubApiError('UPSTREAM_ERROR', 'GitHub returned an unreadable response.', true); }
+  try {
+    responseText = await response.text();
+    payload = JSON.parse(responseText) as GraphQLResponse;
+  } catch {
+    console.error('[commit-garden] GitHub GraphQL returned non-JSON', { status: response.status, contentType: response.headers.get('content-type'), bodyPrefix: responseText.slice(0, 120) });
+    throw new GitHubApiError('UPSTREAM_ERROR', 'GitHub returned an unreadable response.', true);
+  }
   if (response.status === 401) throw new GitHubApiError('TOKEN_INVALID', 'The server GitHub API token is invalid or expired.', false);
   const hasReadUserScope = (response.headers.get('x-oauth-scopes') ?? '').split(',').map((scope) => scope.trim()).includes('read:user');
   if (hasReadUserScope) throw new GitHubApiError('TOKEN_INVALID', 'The server GitHub token has read:user scope, which is not allowed for public-only data.', false);
