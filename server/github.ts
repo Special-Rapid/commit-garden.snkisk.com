@@ -36,7 +36,7 @@ export async function getCommitGardenData(username: string, token: string | unde
   if (cached && cached.expiresAt > Date.now()) return cached.data;
   let response: Response;
   try {
-    response = await fetch(endpoint, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ query, variables: { login, from: from.toISOString(), to: to.toISOString() } }) });
+    response = await fetch(endpoint, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', 'user-agent': 'commit-garden.snkisk.com' }, body: JSON.stringify({ query, variables: { login, from: from.toISOString(), to: to.toISOString() } }) });
   } catch {
     throw new GitHubApiError('NETWORK_ERROR', 'Could not reach GitHub. Please try again.', true);
   }

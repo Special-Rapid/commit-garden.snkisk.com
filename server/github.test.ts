@@ -17,4 +17,11 @@ describe('GitHub API errors', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: { user: null }, errors: [{ message: 'Internal error' }] }), { status: 200 })));
     await expect(getCommitGardenData('graphql-error-fixture', 'token')).rejects.toMatchObject({ code: 'UPSTREAM_ERROR', retryable: true });
   });
+
+  it('identifies the service to GitHub GraphQL', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: { user: null }, errors: [{ message: 'Internal error' }] }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(getCommitGardenData('user-agent-fixture', 'token')).rejects.toMatchObject({ code: 'UPSTREAM_ERROR', retryable: true });
+    expect(fetchMock).toHaveBeenCalledWith('https://api.github.com/graphql', expect.objectContaining({ headers: expect.objectContaining({ 'user-agent': 'commit-garden.snkisk.com' }) }));
+  });
 });
