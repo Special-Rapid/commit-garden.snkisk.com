@@ -1,0 +1,4 @@
+import type { ContributionDay } from '../lib/types';
+import { plantForContribution } from '../lib/garden';
+
+export function MiniContributionMap({ days }: { days: ContributionDay[] }) { const leadingBlanks = days[0]?.weekday ?? 0; return <section className="mini-map-section" aria-labelledby="map-heading"><div><p className="eyebrow">Activity at a glance</p><h2 id="map-heading">Contribution map</h2></div><div className="mini-map" role="img" aria-label="A compact map of contribution activity over the past year">{Array.from({ length: leadingBlanks }, (_, index) => <span className="mini-blank" aria-hidden="true" key={`blank-${index}`} />)}{days.map((day) => <span key={day.date} className={`mini-plot plant-${plantForContribution(day)}`} title={`${day.date}: ${day.count} contributions`} />)}</div></section>; }

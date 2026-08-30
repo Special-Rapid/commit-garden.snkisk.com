@@ -1,0 +1,2 @@
+import type { ApiError } from '../lib/types';
+export function ErrorState({ error, onRetry }: { error: ApiError['error']; onRetry: () => void }) { const canTryAnother = error.code === 'NOT_FOUND' || error.code === 'INVALID_USERNAME'; return <section className="state-card error-state" role="alert"><span aria-hidden="true">!</span><h1>Your garden needs a moment</h1><p>{error.message}</p>{error.retryable ? <button type="button" onClick={onRetry}>Try again</button> : <a href="/">{canTryAnother ? 'Try another username' : 'Return home'}</a>}</section>; }

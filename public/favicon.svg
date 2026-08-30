@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Commit Garden">
+  <rect width="64" height="64" rx="18" fill="#f7f3e8"/>
+  <path d="M31.7 50.5V31.2" stroke="#205d36" stroke-width="4" stroke-linecap="round"/>
+  <path d="M31 31c-11.4-.2-17-7.1-16-16 9.3-.2 15.9 4.5 16 16Z" fill="#66bb6a"/>
+  <path d="M33 38.1c10.7-.5 15.7-6.8 14.5-15.2-8.8.4-14.8 5.2-14.5 15.2Z" fill="#9ccc65"/>
+  <circle cx="32" cy="28" r="5.5" fill="#d99d27"/>
+  <circle cx="32" cy="28" r="2" fill="#fffaf0"/>
+</svg>
