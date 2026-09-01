@@ -1,18 +1,38 @@
 # Commit Garden 🌱
 
-GitHubの公開Contributionを、乾いた土・芽・草・花・低木・木が育つ庭として眺める小さなWebアプリです。
+**Turn public GitHub contributions into a living garden.**
 
-## できること
+[commit-garden.snkisk.com](https://commit-garden.snkisk.com/) は、過去365日のGitHub公開Contributionを、乾いた土から草花・低木・木へつながる庭として描くWebアプリです。GitHubの草グラフを複製するのではなく、開発習慣をひとつの風景として振り返れるようにします。
+
+## Features
 
 - GitHub usernameから過去365日の公開Contributionを取得
-- Total Contributions / current・longest streak / average / peak day / active weekday / dry daysを表示
-- 件数に応じて庭のプロットを変化させ、hover・tap・キーボードで日付と件数を確認
-- ミニContribution mapと共有URLコピー
-- 無効username、未設定token、rate limit、GitHub未到達、該当ユーザーなし、寄与ゼロを明確に表示
+- total contributions、current/longest streak、average/day、most active weekday、dry daysを表示
+- 日別の件数と位置をもとに、乾いた土・ひび・草・花・低木・木が連続して育つCanvas庭園を描画
+- キーボード、クリック、タップで任意の日を選び、日付とContribution件数を確認
+- System / Light / Dark theme と日本語 / English を切替・保存
+- 共有URLのコピーとGitHubプロフィールへの最小リンク
+- 無効username、未設定token、rate limit、ネットワーク、空データを区別して表示
 
-## ローカル起動
+## Architecture
 
-必要環境: Node.js 20以降。
+- React + TypeScript + Vite
+- Cloudflare Workers Static Assets（Cloudflare Pagesは使用しません）
+- GitHub GraphQL APIをWorker側だけから呼ぶ
+- `GITHUB_TOKEN` はCloudflare secretとしてのみ使用し、ブラウザbundleへ含めない
+- 庭のruntime mediaはGitに置かず、Cloudflare R2/CDNからimmutable URLで配信
+
+```
+src/worker.ts             GET /api/github/:username を処理するWorker
+server/github.ts          GitHub GraphQL取得・正規化・統計
+src/lib/stats.ts          純粋な統計計算
+src/components/GardenCanvas.tsx
+                          Contribution駆動のCanvas 2D庭レンダラー
+```
+
+## Local development
+
+必要環境はNode.js 20以降です。
 
 ```bash
 npm install
@@ -21,35 +41,28 @@ cp .env.example .env
 npm run dev
 ```
 
-`GITHUB_TOKEN` はViteの開発middlewareとCloudflare Workerだけで利用します。**`read:user` scopeを付けない最小権限token**を使ってください。`read:user`が付くtokenはprivate/internal contributionを含み得るため、このアプリはserver側で拒否します。`VITE_` prefixを付けず、ブラウザへ公開しないでください。
+`GITHUB_TOKEN` は開発middlewareとCloudflare Workerだけで利用します。`VITE_` prefixを付けないでください。値をGit、`wrangler.jsonc`、frontend環境変数へ置かないでください。
 
 ```bash
 npm test
 npm run typecheck
 npm run build
-```
-
-## Cloudflare Workers Builds への接続
-
-このリポジトリはCloudflare Workers Static Assets構成です。
-
-- `wrangler.jsonc`: Worker名、`src/worker.ts`、`dist/`の静的配信、SPA fallback、`/api/*`のWorker先行を定義
-- `src/worker.ts`: `GET /api/github/:username` のみを処理し、その他はCloudflareのasset bindingへ渡す
-- build command: `npm ci && npm run build`
-
-GitHubへpush後、Cloudflare Dashboardの **Workers & Pages** からWorkerを作成してGitHub repository `commit-garden.snkisk.com` を接続してください。既存Workerに紐付ける場合は **Settings → Builds → Git Repository** から管理できます。接続後、Workerの **Settings → Variables and Secrets** で `GITHUB_TOKEN` を**secret**として登録してください。値をGitHub、`wrangler.jsonc`、またはfrontend環境変数に置かないでください。
-
-ローカルでWorkers設定を確認する場合:
-
-```bash
 npx wrangler deploy --dry-run
 ```
 
-## 仕組み
+## Cloudflare Workers Builds
 
-GitHub GraphQL APIの`contributionsCollection(from, to)`をサーバー側から呼び、`weeks[].contributionDays[]`を日付順に正規化します。同じ`username + from + to`は実行中プロセス内で1時間キャッシュします。
+このリポジトリはWorkers Static Assets構成です。
 
-| Contribution count | Garden plot |
+- build command: `npm ci && npm run build`
+- deploy command: `npx wrangler deploy`
+- `wrangler.jsonc`は`dist/`をStatic Assetsとして配信し、`/api/*`だけをWorkerで先に処理します
+
+GitHub repositoryをCloudflare Workerへ接続した後、**Settings → Variables and Secrets** で `GITHUB_TOKEN` をproduction secretとして登録してください。tokenの値をissue、commit、環境変数ファイル、ログへ書き込まないでください。
+
+## Contribution mapping
+
+| Count | Garden state |
 | --- | --- |
 | 0 | Dry soil |
 | 1–2 | Sprout |
@@ -58,6 +71,12 @@ GitHub GraphQL APIの`contributionsCollection(from, to)`をサーバー側から
 | 11–20 | Bush |
 | 21+ | Tree |
 
-## MVPの境界
+庭の見た目は固定パノラマではありません。各日の件数、乾いた日、カレンダー上の位置から決定的に描くため、Contributionデータが異なれば庭も変化します。
 
-公開Contributionのみを扱います。OAuth、private contribution、DB、アカウント、ランキング、README SVG生成、OG画像は未実装です。`/u/:username.svg` と `/api/svg/:username` は将来拡張のために通常のAPI/UI境界から独立しています。
+## Scope
+
+MVPでは公開Contributionのみを扱います。OAuth、private contribution、DB、アカウント、ランキング、README SVG生成、OG画像は未実装です。
+
+## License
+
+[MIT](./LICENSE)
