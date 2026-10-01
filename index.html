@@ -5,11 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f7f3e8" />
     <meta name="description" content="Turn your GitHub contributions into a living garden." />
+    <link rel="canonical" href="https://commit-garden.snkisk.com/" />
+    <link rel="alternate" type="text/plain" title="Commit Garden site guide" href="https://commit-garden.snkisk.com/llms.txt" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Commit Garden</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main class="landing">
+        <section class="hero">
+          <h1>Turn your GitHub contributions into a living garden.</h1>
+          <p>Every commit leaves a trace: dry earth, fresh shoots, bright flowers, and trees that mark a brilliant day.</p>
+          <p lang="ja">GitHubの過去365日の公開Contributionを、育つ庭として表示します。</p>
+          <p>We fetch public activity only. Your GitHub token stays on the server.</p>
+          <p><a href="https://commit-garden.snkisk.com/llms.txt">About Commit Garden</a></p>
+          <noscript>Enable JavaScript to enter a GitHub username and view the garden.</noscript>
+        </section>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

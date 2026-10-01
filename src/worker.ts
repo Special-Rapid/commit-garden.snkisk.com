@@ -21,6 +21,11 @@ export default {
         : { code: 'METHOD_NOT_ALLOWED', message: 'Method not allowed.', retryable: false };
       return Response.json({ error }, { status: request.method === 'GET' ? 404 : 405 });
     }
+    // Only the existing client-side dashboard route needs the application shell.
+    // Missing asset/discovery URLs must retain a real 404 response.
+    if ((request.method === 'GET' || request.method === 'HEAD') && /^\/u\/[^/]+$/.test(url.pathname)) {
+      return env.ASSETS.fetch(new Request(new URL('/', url), request));
+    }
     return env.ASSETS.fetch(request);
   },
 };

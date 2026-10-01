@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /u/
+
+Sitemap: https://commit-garden.snkisk.com/sitemap.xml
