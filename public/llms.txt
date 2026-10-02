@@ -1,0 +1,10 @@
+# Commit Garden
+
+GitHubの過去365日の公開Contributionを庭として表示するWebアプリです。
+GitHub usernameを入力すると、Contribution件数・連続日数・平均・活動曜日などを確認できます。
+個人の庭は /u/{username} で開きます。入力とデータ取得・Canvas描画にはJavaScriptが必要です。
+このファイルに個人の活動データや認証情報は含めません。APIやusername別画面はsitemapへ列挙しません。
+
+- [公開サイトと使い方](https://commit-garden.snkisk.com/)
+
+公開情報の取得を助ける案内です。モデル学習への追加許諾を示すものではありません。
