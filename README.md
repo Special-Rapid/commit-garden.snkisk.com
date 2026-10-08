@@ -56,9 +56,23 @@ npx wrangler deploy --dry-run
 
 - build command: `npm ci && npm run build`
 - deploy command: `npx wrangler deploy`
-- `wrangler.jsonc`は`dist/`をStatic Assetsとして配信し、`/api/*`だけをWorkerで先に処理します
+- 通常公開時は`dist/`をStatic Assetsとして配信します。一時停止中の配信対象とroutingは次項のとおりです。
 
 GitHub repositoryをCloudflare Workerへ接続した後、**Settings → Variables and Secrets** で `GITHUB_TOKEN` をproduction secretとして登録してください。tokenの値をissue、commit、環境変数ファイル、ログへ書き込まないでください。
+
+## Temporary publication pause
+
+リニューアル準備のため、公開する静的ファイルを`./suspended`の停止ページだけに切り替えています。
+通常のページ表示とSPA fallbackは日英の停止案内（HTTP 200）を静的配信し、旧`dist/`のアプリ・JS・CSSはアップロードしません。
+`/api/*`だけをWorkerで先に処理してHTTP 503を返します。Workerへ到達したその他のリクエストも503で止め、GitHub APIやASSETS bindingを呼びません。
+案内と停止応答には`no-store`と`noindex`を付けています。旧アプリを動かすscript・入力・リンクはありません。
+通常の停止ページ表示をWorker invocationへ切り替えず、既存の静的配信を使います。
+
+再公開時はこの停止変更をrevertし、通常のbuild・deployを行ってください。
+停止前のコードは`acdc019af7f4428f5480467690c970dd370b615f`です。
+元のassets directoryは`./dist`、`not_found_handling`は`none`、`run_worker_first`は`["/api/*", "/u/*"]`です。
+Workerの本番別名には同じ停止応答が適用されますが、過去versionのpreview URLや別のホスティングサービスは個別確認が必要です。
+repository、過去deploy、secret、DNS、R2素材は保持します。
 
 ## Contribution mapping
 

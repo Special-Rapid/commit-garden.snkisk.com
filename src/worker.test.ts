@@ -1,30 +1,38 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import worker from './worker';
 
-describe('static page routing', () => {
-  const requests: string[] = [];
-  const env = { ASSETS: { fetch: async (request: Request) => {
-    const path = new URL(request.url).pathname;
-    requests.push(path);
-    return new Response(path === '/' ? '<h1>Commit Garden</h1>' : null, { status: path === '/' ? 200 : 404 });
-  } } };
+describe('Worker denial during the temporary publication pause', () => {
+  afterEach(() => vi.unstubAllGlobals());
 
-  it.each(['GET', 'HEAD'])('preserves the dashboard shell for %s without querying GitHub', async method => {
-    requests.length = 0;
-    const response = await worker.fetch(new Request('https://commit-garden.snkisk.com/u/example', { method }), env);
-    expect(response.status).toBe(200);
-    expect(requests).toEqual(['/']);
+  it.each([
+    '/', '/u/example', '/api/github/octocat?range=365', '/api/unknown',
+    '/assets/index-mOxgpfdl.js', '/robots.txt', '/sitemap.xml', '/llms.txt',
+    '/missing.txt', '/u/example/extra', '/api/github/%E0%A4%A',
+  ])('stops %s before static assets or the GitHub upstream', async path => {
+    const assets = vi.fn(() => { throw new Error('Assets must remain unavailable'); });
+    const upstream = vi.fn(() => { throw new Error('GitHub must not be queried'); });
+    vi.stubGlobal('fetch', upstream);
+    const response = await worker.fetch(new Request(`https://commit-garden.snkisk.com${path}`), {
+      ASSETS: { fetch: assets }, GITHUB_TOKEN: 'test-only-unused-token',
+    });
+    expect(response.status).toBe(503);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('content-type')).toBe('text/plain; charset=utf-8');
+    expect(response.headers.get('x-robots-tag')).toContain('noindex');
+    expect(await response.text()).toContain('公開を一時停止');
+    expect(assets).not.toHaveBeenCalled();
+    expect(upstream).not.toHaveBeenCalled();
   });
 
-  it.each(['/missing.txt', '/llms-missing.txt', '/u/example/extra', '/u/'])('does not turn %s into a successful app page', async path => {
-    const response = await worker.fetch(new Request(`https://commit-garden.snkisk.com${path}`), env);
-    expect(response.status).toBe(404);
-  });
-
-  it('retains API error responses without falling back to HTML', async () => {
-    const response = await worker.fetch(new Request('https://commit-garden.snkisk.com/api/unknown'), env);
-    expect(response.status).toBe(404);
-    expect(response.headers.get('content-type')).toContain('application/json');
-    expect(await response.json()).toMatchObject({ error: { code: 'API_NOT_FOUND' } });
+  it.each(['HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS'])('also stops %s requests', async method => {
+    const assets = vi.fn();
+    const response = await worker.fetch(new Request('https://example.workers.dev/api/github/octocat', { method }), {
+      ASSETS: { fetch: assets },
+    });
+    expect(response.status).toBe(503);
+    const body = await response.text();
+    if (method === 'HEAD') expect(body).toBe('');
+    else expect(body).toContain('Temporarily unavailable');
+    expect(assets).not.toHaveBeenCalled();
   });
 });
