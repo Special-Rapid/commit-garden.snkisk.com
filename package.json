@@ -21,6 +21,6 @@
     "@types/react-dom": "latest",
     "typescript": "latest",
     "vitest": "latest",
-    "wrangler": "latest"
+    "wrangler": "4.149.0"
   }
 }
