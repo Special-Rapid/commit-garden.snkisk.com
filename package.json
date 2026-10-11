@@ -7,7 +7,9 @@
     "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b",
-    "test": "vitest run"
+    "test": "vitest run",
+    "media:verify": "node tools/media-verify.ts",
+    "media:test": "vitest run tools/media-verify.test.ts"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
