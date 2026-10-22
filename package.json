@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
+    "vite": "8.2.4",
     "react": "latest",
     "react-dom": "latest"
   },
@@ -20,7 +20,12 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "typescript": "latest",
-    "vitest": "latest",
+    "vitest": "4.1.12",
     "wrangler": "4.149.0"
+  },
+  "overrides": {
+    "miniflare": {
+      "undici": "7.30.1"
+    }
   }
 }
