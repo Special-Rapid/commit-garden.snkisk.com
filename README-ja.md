@@ -48,7 +48,7 @@ npm run dev
 
 開発サーバーは`http://127.0.0.1:5173`で起動し、本番の停止処理とは独立したアプリとサーバー側middlewareを使用します。
 
-`GITHUB_TOKEN`は開発middlewareとCloudflare Workerだけで利用します。`VITE_` prefixを付けたり、値をGit、`wrangler.jsonc`、frontend環境変数、Issue、commit、ログへ置いたりしないでください。
+`GITHUB_TOKEN`は開発middlewareとCloudflare Workerだけで利用します。`VITE_` prefixは付けないでください。tokenの値をGit、`wrangler.jsonc`、frontend環境変数、Issue、commit、ログへ置かないでください。
 
 ```bash
 npm test
@@ -73,7 +73,7 @@ dry-runは現在の停止中Worker・assets構成を公開せずに確認しま�
 
 本番のassets directoryは、停止ページだけを含む`./suspended`に設定しています。通常のページ表示とSPA fallbackは日英の停止案内をHTTP 200で静的配信する構成で、旧`dist/`のアプリ・JS・CSSはアップロードしません。
 
-`/api/*`だけをWorkerで先に処理してHTTP 503を返します。Workerへ到達したその他のリクエストも503で止め、GitHub APIやASSETS bindingを呼びません。案内と停止応答には`no-store`と`noindex`を付けており、旧アプリを動かすscript・入力・リンクはありません。通常の停止ページ表示をWorker invocationへ切り替えず、既存の静的配信を使います。これらのHTTP statusは設定上の挙動であり、現在の公開到達性を保証するものではありません。
+`/api/*`だけをWorkerで先に処理してHTTP 503を返します。Workerへ到達したその他のリクエストも503で止め、GitHub APIやASSETS bindingを呼びません。案内と停止応答には`no-store`と`noindex`を付けており、旧アプリを動かすscript・入力・リンクはありません。通常の停止ページ表示ではWorkerを呼び出さず、既存の静的配信を使います。これらのHTTP statusは設定上の挙動であり、現在の公開到達性を保証するものではありません。
 
 再公開には別途承認を得たうえで、停止変更を戻し、通常のbuild・deploy確認が必要です。停止前のコードは`acdc019af7f4428f5480467690c970dd370b615f`です。元のassets directoryは`./dist`、`not_found_handling`は`none`、`run_worker_first`は`["/api/*", "/u/*"]`です。復旧を準備するときは、その後の依存修正も保持してください。
 
