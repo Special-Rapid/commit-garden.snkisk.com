@@ -1,47 +1,54 @@
+[日本語](README-ja.md)
+
 # Commit Garden 🌱
 
 **Turn public GitHub contributions into a living garden.**
 
-[commit-garden.snkisk.com](https://commit-garden.snkisk.com/) は、過去365日のGitHub公開Contributionを、乾いた土から草花・低木・木へつながる庭として描くWebアプリです。GitHubの草グラフを複製するのではなく、開発習慣をひとつの風景として振り返れるようにします。
+[Commit Garden](https://commit-garden.snkisk.com/) visualizes the past 365 days of public GitHub contributions as a landscape of dry soil, grass, flowers, bushes, and trees. Instead of copying the contribution graph, it offers a way to look back on development habits through a single landscape.
+
+**Public access is temporarily paused.** The features below describe the application available for local development. Production is configured to serve the suspension page described below. Renewal and media work remain deferred.
 
 ## Features
 
-- GitHub usernameから過去365日の公開Contributionを取得
-- total contributions、current/longest streak、average/day、most active weekday、dry daysを表示
-- 日別の件数と位置をもとに、乾いた土・ひび・草・花・低木・木が連続して育つCanvas庭園を描画
-- キーボード、クリック、タップで任意の日を選び、日付とContribution件数を確認
-- System / Light / Dark theme と日本語 / English を切替・保存
-- 共有URLのコピーとGitHubプロフィールへの最小リンク
-- 無効username、未設定token、rate limit、ネットワーク、空データを区別して表示
+- Fetch the past 365 days of public contributions by GitHub username.
+- Show total contributions, current and longest streaks, average per day, most active weekday, and dry days.
+- Render a continuous Canvas garden of dry soil, cracks, grass, flowers, bushes, and trees from each day's contribution count and position.
+- Select a day with a keyboard, click, or tap to inspect its date and contribution count.
+- Switch and persist System / Light / Dark themes and Japanese / English.
+- Copy a share URL and open a minimal link to the GitHub profile.
+- Display distinct states for invalid usernames, missing tokens, rate limits, network failures, and empty data. Correct handling of nonexistent users remains tracked in [Issue #3](https://github.com/Special-Rapid/commit-garden.snkisk.com/issues/3).
 
 ## Architecture
 
-- React + TypeScript + Vite
-- Cloudflare Workers Static Assets（Cloudflare Pagesは使用しません）
-- GitHub GraphQL APIをWorker側だけから呼ぶ
-- `GITHUB_TOKEN` はCloudflare secretとしてのみ使用し、ブラウザbundleへ含めない
-- 庭のruntime mediaはGitに置かず、Cloudflare R2/CDNからimmutable URLで配信
+- React + TypeScript + Vite.
+- Cloudflare Workers Static Assets; Cloudflare Pages is not used.
+- GitHub GraphQL requests run only on the server side.
+- Production uses a Cloudflare secret for `GITHUB_TOKEN`; the token is never included in the browser bundle.
+- Garden runtime media is delivered from Cloudflare R2/CDN through immutable URLs, rather than stored in Git.
 
-```
-src/worker.ts             GET /api/github/:username を処理するWorker
-server/github.ts          GitHub GraphQL取得・正規化・統計
-src/lib/stats.ts          純粋な統計計算
-src/components/GardenCanvas.tsx
-                          Contribution駆動のCanvas 2D庭レンダラー
-```
+| Location | Responsibility |
+| --- | --- |
+| [src/](src/) | React application and Worker entry point |
+| [src/worker.ts](src/worker.ts) | Worker and `GET /api/github/:username` route, currently suspended |
+| [server/](server/) | GraphQL retrieval, normalization, statistics, and development middleware |
+| [src/lib/stats.ts](src/lib/stats.ts) | Pure statistics calculations |
+| [src/components/GardenCanvas.tsx](src/components/GardenCanvas.tsx) | Contribution-driven Canvas 2D garden renderer |
+| [suspended/](suspended/) | Static production suspension page and headers |
 
 ## Local development
 
-必要環境はNode.js 20以降です。
+Use a maintained, patched Node.js release satisfying Node.js 22.12 or later. Wrangler requires Node.js 22 or later; Vite requires at least 22.12 on that release line. Local verification has used Node.js 24.22.1 with npm 10 and npm 11.
 
 ```bash
-npm install
+npm ci
 cp .env.example .env
-# .envのGITHUB_TOKENにGitHub tokenをローカルで設定する
+# Set GITHUB_TOKEN locally in .env.
 npm run dev
 ```
 
-`GITHUB_TOKEN` は開発middlewareとCloudflare Workerだけで利用します。`VITE_` prefixを付けないでください。値をGit、`wrangler.jsonc`、frontend環境変数へ置かないでください。
+The development server listens on `http://127.0.0.1:5173` and uses the application and server-side middleware independently of the production suspension gate.
+
+`GITHUB_TOKEN` is used only by the development middleware and Cloudflare Worker. Never add the `VITE_` prefix or put its value in Git, `wrangler.jsonc`, frontend environment variables, issues, commits, or logs.
 
 ```bash
 npm test
@@ -50,29 +57,27 @@ npm run build
 npx wrangler deploy --dry-run
 ```
 
+The dry run checks the configured suspended Worker/assets without publishing them. A successful build or dry run does not verify the public service.
+
 ## Cloudflare Workers Builds
 
-このリポジトリはWorkers Static Assets構成です。
+This repository uses Workers Static Assets.
 
-- build command: `npm ci && npm run build`
-- deploy command: `npx wrangler deploy`
-- 通常公開時は`dist/`をStatic Assetsとして配信します。一時停止中の配信対象とroutingは次項のとおりです。
+- Build command: `npm ci && npm run build`
+- Deploy command: `npx wrangler deploy`
+- Normal publication uses `dist/` as Static Assets. The suspension uses the directory and routing below.
 
-GitHub repositoryをCloudflare Workerへ接続した後、**Settings → Variables and Secrets** で `GITHUB_TOKEN` をproduction secretとして登録してください。tokenの値をissue、commit、環境変数ファイル、ログへ書き込まないでください。
+When configuring an authorized production connection, register `GITHUB_TOKEN` as a production secret under **Settings → Variables and Secrets**. Never publish its value. These instructions do not authorize deployment or reopening the service.
 
 ## Temporary publication pause
 
-リニューアル準備のため、公開する静的ファイルを`./suspended`の停止ページだけに切り替えています。
-通常のページ表示とSPA fallbackは日英の停止案内（HTTP 200）を静的配信し、旧`dist/`のアプリ・JS・CSSはアップロードしません。
-`/api/*`だけをWorkerで先に処理してHTTP 503を返します。Workerへ到達したその他のリクエストも503で止め、GitHub APIやASSETS bindingを呼びません。
-案内と停止応答には`no-store`と`noindex`を付けています。旧アプリを動かすscript・入力・リンクはありません。
-通常の停止ページ表示をWorker invocationへ切り替えず、既存の静的配信を使います。
+The configured production asset directory is `./suspended`, containing only the suspension page. Normal page requests and SPA fallback are configured to serve the Japanese/English static notice with HTTP 200. The previous application's `dist/` assets, JavaScript, and CSS are not uploaded.
 
-再公開時はこの停止変更をrevertし、通常のbuild・deployを行ってください。
-停止前のコードは`acdc019af7f4428f5480467690c970dd370b615f`です。
-元のassets directoryは`./dist`、`not_found_handling`は`none`、`run_worker_first`は`["/api/*", "/u/*"]`です。
-Workerの本番別名には同じ停止応答が適用されますが、過去versionのpreview URLや別のホスティングサービスは個別確認が必要です。
-repository、過去deploy、secret、DNS、R2素材は保持します。
+Only `/api/*` runs through the Worker first and returns HTTP 503. Any other request reaching the Worker also returns 503 without calling GitHub or the ASSETS binding. The notice and suspension responses use `no-store` and `noindex`; the notice has no scripts, inputs, or links that run the old application. Normal suspension-page requests keep static delivery instead of Worker invocations. These status codes describe the configured behavior, not a guarantee of current public availability.
+
+Reopening requires separate approval, reversal of the suspension changes, and the normal build/deployment checks. The pre-suspension code is `acdc019af7f4428f5480467690c970dd370b615f`. The original asset directory was `./dist`, `not_found_handling` was `none`, and `run_worker_first` was `["/api/*", "/u/*"]`. Preserve subsequent dependency fixes when preparing any restoration.
+
+Production aliases use the same suspension behavior. Historical version preview URLs and other hosting services require separate verification. The repository, deployment history, secrets, DNS, and R2 media remain in place.
 
 ## Contribution mapping
 
@@ -85,12 +90,12 @@ repository、過去deploy、secret、DNS、R2素材は保持します。
 | 11–20 | Bush |
 | 21+ | Tree |
 
-庭の見た目は固定パノラマではありません。各日の件数、乾いた日、カレンダー上の位置から決定的に描くため、Contributionデータが異なれば庭も変化します。
+The garden is not a fixed panorama. It is rendered deterministically from daily contribution counts, dry days, and calendar positions, so different contribution data produces a different landscape.
 
 ## Scope
 
-MVPでは公開Contributionのみを扱います。OAuth、private contribution、DB、アカウント、ランキング、README SVG生成、OG画像は未実装です。
+The MVP handles public contributions only. OAuth, private contributions, a database, accounts, rankings, README SVG generation, and OG images are not implemented.
 
 ## License
 
-[MIT](./LICENSE)
+[MIT](LICENSE). The existing copyright notice is preserved. Dependencies and external media retain their respective license terms.
